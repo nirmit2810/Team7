@@ -83,7 +83,15 @@
 		$('#messages').append($('<li>').text("Average Temperature of Sensor 2: " + temperature[2]));
 		$('#messages').append($('<li>').text("Average Temperature of Sensor 3: " + temperature[3]));
 		
-		$('#messages').append($('<li>').text("=====Average Temperature of All Sensors: " + average + "====="));
+	// Get the current time
+		var now = new Date();
+		var hour = now.getHours();
+		var minute = now.getMinutes();
+		var second = now.getSeconds();
+		var time = hour + ':' + minute + ':' + second;
+		
+		
+		$('#messages').append($('<li>').text("=====Average Temperature of All Sensors at: " + time + " is " + average + "======"));
 	}
 	
   });
