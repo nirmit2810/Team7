@@ -17,14 +17,23 @@ var MongoClient
 var url;
 
 var deviceID = 9;
-		
-var temperature = 999.99;
 
 var current;
 		
 var time = '99:99:99';
 
 var time_ms = 999999999; 
+
+var average = -999.99;
+
+var temperature = new Array([4]);
+
+// Update Status of Temperatures 
+// 0: Pending 1: Updated
+var update = [0, 0, 0, 0];
+  
+// Temperatures
+var temperature = new Array([4]);
 
 MongoClient = require('mongodb').MongoClient
 				, assert = require('assert');
@@ -62,44 +71,60 @@ sp.on("open", function () {
 		// Parse data
 		deviceID = parseInt(data.substring(1, 2));
 		
-		temperature = parseFloat(data.substring(4, (data.length - 1)));
+		temperature[deviceID] = parseFloat(data.substring(4, (data.length - 1)));
 	
-		current = new Date();
-		
-		time = current.toString();
-		
-		time_ms = Date.parse(time);
+		update[deviceID] = 1;
 	
-		// DB operations
-		// Use connect method to connect to the Server
-		MongoClient.connect(url, function(err, db) {
-			assert.equal(null, err);
+		if( ( update[0] == 1 ) && ( update[1] == 1) && ( update[2] == 1) && ( update[3] == 1) )
+		{
+			current = new Date();
+			time = current.toString();
+			time_ms = Date.parse(time);
+			
+			average = (temperature[0] + temperature[1] + temperature[2] + temperature[3]) / 4;
+			average = parseFloat(average.toFixed(2));
 		
-			console.log("Connected correctly to server");	
+			update[0] = 0;
+			update[1] = 0;
+			update[2] = 0;
+			update[3] = 0;
 		
-			// Get the documents collection
-			var collection = db.collection('test');
+			// DB operations
+			// Use connect method to connect to the Server
+			MongoClient.connect(url, function(err, db) {
+				assert.equal(null, err);
+			
+				console.log("Connected correctly to server");	
+			
+				// Get the documents collection
+				var collection = db.collection('test');
 
-			//Create some users
-			var message = {Device_ID: deviceID, Temperature: temperature, Time: time, Time_ms: time_ms};
-		
-			collection.insert([message], function (err, result) 
-			{
-				if (err) 
+				// Create tables
+				var message_0 = {Device_ID: 0, Temperature: temperature[0], Time: time, Time_ms: time_ms};
+				var message_1 = {Device_ID: 1, Temperature: temperature[1], Time: time, Time_ms: time_ms};
+				var message_2 = {Device_ID: 2, Temperature: temperature[2], Time: time, Time_ms: time_ms};
+				var message_3 = {Device_ID: 3, Temperature: temperature[3], Time: time, Time_ms: time_ms};
+				// Average
+				var message_A = {Device_ID: 9, Temperature: average, Time: time, Time_ms: time_ms};
+			
+				collection.insert([message_0, message_1, message_2, message_3, message_A], function (err, result) 
 				{
-					console.log(err);
-				} 
-				else 
-				{
-					console.log('Inserted %d documents into the "test" collection. The documents inserted with "_id" are:', result.length, result);
-				}
-		
-				db.close();
+					if (err) 
+					{
+						console.log(err);
+					} 
+					else 
+					{
+						console.log('Inserted %d documents into the "test" collection. The documents inserted with "_id" are:', result.length, result);
+					}
+			
+					db.close();
+				});
 			});
-		});
-  
-		// Transmit the parsed data to the html
-		io.emit("chat message", (data + '(' + time +')'));
+			
+			// Transmit the parsed data to the html
+			io.emit("chat message", '(' + temperature[0] + ')' + '(' + temperature[1] + ')' + '(' + temperature[2] + ')' + '(' + temperature[3] + ')' + '[' + average + ']' + '{' + time + '}');
+		}
 	});
 });
 
