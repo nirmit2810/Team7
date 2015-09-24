@@ -11,6 +11,24 @@ portConfig = {
 
 var sp;
 
+var MongoClient 
+
+// Connection URL
+var url;
+
+var deviceID = 0;
+		
+var temperature = 123.456;
+		
+var time = '12:34:56';
+
+var time_ms = 123456789; 
+
+MongoClient = require('mongodb').MongoClient
+				, assert = require('assert');
+
+url = 'mongodb://localhost:27017/dbTest';				
+				
 sp = new SerialPort.SerialPort(portName, portConfig);
 
 app.get('/', function(req, res){
@@ -33,9 +51,40 @@ http.listen(3000, function(){
 
 sp.on("open", function () {
   console.log('open');
+  
   sp.on('data', function(data) {
-    console.log('data received: ' + data);
+	// Handle received Data
+	console.log('data received: ' + data);
     io.emit("chat message", data);
+	
+	// DB operations
+	// Use connect method to connect to the Server
+	MongoClient.connect(url, function(err, db) {
+		assert.equal(null, err);
+		
+		console.log("Connected correctly to server");	
+		
+		// Get the documents collection
+		var collection = db.collection('test');
+
+		//Create some users
+		var message = {Device_ID: deviceID, Temperature: temperature, Time: time, Time_ms: time_ms};
+		
+	collection.insert([message], function (err, result) 
+	{
+      if (err) 
+	  {
+        console.log(err);
+      } 
+	  else 
+	  {
+        console.log('Inserted %d documents into the "test" collection. The documents inserted with "_id" are:', result.length, result);
+      }
+		
+		db.close();
+	});
   });
 });
+});
+
 
