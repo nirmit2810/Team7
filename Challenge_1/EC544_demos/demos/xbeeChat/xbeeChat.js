@@ -16,13 +16,15 @@ var MongoClient
 // Connection URL
 var url;
 
-var deviceID = 0;
+var deviceID = 9;
 		
-var temperature = 123.456;
-		
-var time = '12:34:56';
+var temperature = 999.99;
 
-var time_ms = 123456789; 
+var current;
+		
+var time = '99:99:99';
+
+var time_ms = 999999999; 
 
 MongoClient = require('mongodb').MongoClient
 				, assert = require('assert');
@@ -50,41 +52,55 @@ http.listen(3000, function(){
 });
 
 sp.on("open", function () {
-  console.log('open');
+	console.log('open');
   
-  sp.on('data', function(data) {
-	// Handle received Data
-	console.log('data received: ' + data);
-    io.emit("chat message", data);
+	sp.on('data', function(data) {
 	
-	// DB operations
-	// Use connect method to connect to the Server
-	MongoClient.connect(url, function(err, db) {
-		assert.equal(null, err);
+		// Handle received Data
+		console.log('data received: ' + data);
+	
+		// Parse data
+		deviceID = parseInt(data.substring(1, 2));
 		
-		console.log("Connected correctly to server");	
+		temperature = parseFloat(data.substring(4, (data.length - 1)));
+	
+		current = new Date();
 		
-		// Get the documents collection
-		var collection = db.collection('test');
+		time = current.toString();
+		
+		time_ms = Date.parse(time);
+	
+		// DB operations
+		// Use connect method to connect to the Server
+		MongoClient.connect(url, function(err, db) {
+			assert.equal(null, err);
+		
+			console.log("Connected correctly to server");	
+		
+			// Get the documents collection
+			var collection = db.collection('test');
 
-		//Create some users
-		var message = {Device_ID: deviceID, Temperature: temperature, Time: time, Time_ms: time_ms};
+			//Create some users
+			var message = {Device_ID: deviceID, Temperature: temperature, Time: time, Time_ms: time_ms};
 		
-	collection.insert([message], function (err, result) 
-	{
-      if (err) 
-	  {
-        console.log(err);
-      } 
-	  else 
-	  {
-        console.log('Inserted %d documents into the "test" collection. The documents inserted with "_id" are:', result.length, result);
-      }
+			collection.insert([message], function (err, result) 
+			{
+				if (err) 
+				{
+					console.log(err);
+				} 
+				else 
+				{
+					console.log('Inserted %d documents into the "test" collection. The documents inserted with "_id" are:', result.length, result);
+				}
 		
-		db.close();
+				db.close();
+			});
+		});
+  
+		// Transmit the parsed data to the html
+		io.emit("chat message", (data + '(' + time +')'));
 	});
-  });
-});
 });
 
 
